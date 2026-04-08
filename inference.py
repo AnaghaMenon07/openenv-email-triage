@@ -1,11 +1,11 @@
 import requests
-import os
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = "http://127.0.0.1:7860"
+
 
 def simple_agent(obs):
-    subject = obs["subject"].lower()
-    body = obs["body"].lower()
+    subject = obs.get("subject", "").lower()
+    body = obs.get("body", "").lower()
 
     if "win" in subject or "click" in body:
         return {
@@ -29,23 +29,60 @@ def simple_agent(obs):
         }
 
 
+def safe_post(url, payload=None):
+    try:
+        if payload:
+            res = requests.post(url, json=payload, timeout=5)
+        else:
+            res = requests.post(url, timeout=5)
+
+        res.raise_for_status()
+        return res.json()
+
+    except Exception as e:
+        print(f"Request failed at {url}: {e}")
+        return None
+
+
 def run():
     total_score = 0
+    step_count = 0
 
-    obs = requests.post(f"{API_URL}/reset").json()
+    # 🔥 REQUIRED START BLOCK
+    print("[START] task=email_triage", flush=True)
+
+    obs = safe_post(f"{API_URL}/reset")
+
+    if obs is None:
+        print("[END] task=email_triage score=0 steps=0", flush=True)
+        return
 
     done = False
 
     while not done:
         action = simple_agent(obs)
 
-        res = requests.post(f"{API_URL}/step", json=action).json()
+        res = safe_post(f"{API_URL}/step", action)
 
-        total_score += res["reward"]
-        obs = res["observation"]
-        done = res["done"]
+        if res is None:
+            print(f"[END] task=email_triage score={total_score} steps={step_count}", flush=True)
+            return
 
-    print("Total Score:", total_score)
+        reward = res.get("reward", 0)
+        obs = res.get("observation")
+        done = res.get("done", True)
+
+        total_score += reward
+        step_count += 1
+
+        # 🔥 REQUIRED STEP BLOCK
+        print(f"[STEP] step={step_count} reward={reward}", flush=True)
+
+        if obs is None:
+            break
+
+    # 🔥 REQUIRED END BLOCK
+    print(f"[END] task=email_triage score={total_score} steps={step_count}", flush=True)
 
 
 if __name__ == "__main__":
