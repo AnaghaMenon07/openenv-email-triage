@@ -1,31 +1,57 @@
 import requests
+import os
+import json
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = "http://127.0.0.1:7860"
+
+
+
+LLM_URL = os.getenv("API_BASE_URL")
+LLM_KEY = os.getenv("API_KEY")
 
 
 def simple_agent(obs):
-    subject = obs.get("subject", "").lower()
-    body = obs.get("body", "").lower()
+    prompt = f"""
+You are an email triage assistant.
 
-    if "win" in subject or "click" in body:
-        return {
-            "category": "spam",
-            "priority": "low",
-            "response": "This looks suspicious."
-        }
+Return ONLY JSON:
+{{
+  "category": "spam/support/internal",
+  "priority": "low/medium/high",
+  "response": "your reply"
+}}
 
-    elif "refund" in subject or "issue" in body:
-        return {
-            "category": "support",
-            "priority": "high",
-            "response": "Sorry for the issue. We will help resolve it."
-        }
+Email:
+Subject: {obs.get("subject", "")}
+Body: {obs.get("body", "")}
+"""
 
-    else:
+    try:
+        response = requests.post(
+            f"{LLM_URL}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {LLM_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "gpt-3.5-turbo",
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ]
+            },
+            timeout=10
+        )
+
+        data = response.json()
+        content = data["choices"][0]["message"]["content"]
+
+        return json.loads(content)
+
+    except Exception as e:
         return {
             "category": "internal",
-            "priority": "medium",
-            "response": "Noted. Will take action accordingly."
+            "priority": "low",
+            "response": "fallback response"
         }
 
 
