@@ -1,6 +1,6 @@
 import requests
 
-API_URL = "http://127.0.0.1:7860"
+API_URL = "http://127.0.0.1:8000"
 
 
 def simple_agent(obs):
@@ -48,41 +48,34 @@ def run():
     total_score = 0
     step_count = 0
 
-    # 🔥 REQUIRED START BLOCK
     print("[START] task=email_triage", flush=True)
 
     obs = safe_post(f"{API_URL}/reset")
-
     if obs is None:
-        print("[END] task=email_triage score=0 steps=0", flush=True)
         return
 
     done = False
 
     while not done:
         action = simple_agent(obs)
-
         res = safe_post(f"{API_URL}/step", action)
 
         if res is None:
-            print(f"[END] task=email_triage score={total_score} steps={step_count}", flush=True)
             return
 
-        reward = res.get("reward", 0)
-        obs = res.get("observation")
-        done = res.get("done", True)
-
+        reward = round(res.get("reward", 0), 2)
         total_score += reward
         step_count += 1
 
-        # 🔥 REQUIRED STEP BLOCK
         print(f"[STEP] step={step_count} reward={reward}", flush=True)
+
+        obs = res.get("observation")
+        done = res.get("done", True)
 
         if obs is None:
             break
 
-    # 🔥 REQUIRED END BLOCK
-    print(f"[END] task=email_triage score={total_score} steps={step_count}", flush=True)
+    print(f"[END] task=email_triage score={round(total_score,2)} steps={step_count}", flush=True)
 
 
 if __name__ == "__main__":

@@ -29,11 +29,10 @@ def step(action: Action):
     next_obs, reward, done, info = env.step(action)
 
     return {
-        "observation": next_obs.dict() if next_obs else None,
-        "reward": reward,
-        "done": done,
-        "info": info
-    }
+    "observation": next_obs,
+    "reward": reward,
+    "done": done
+}
 def main():
     import uvicorn
     uvicorn.run("server.app:app", host="0.0.0.0", port=7860)
